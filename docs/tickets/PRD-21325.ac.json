@@ -1,0 +1,253 @@
+[
+  {
+    "id": "TC-FIGMA-001",
+    "ac": "AC1",
+    "type": "manual",
+    "source": "design",
+    "text": "Given a valid X-Figma-Token, figma_get_me returns the authenticated user's id, email and handle.",
+    "steps": [
+      "Set X-Figma-Token to a valid Figma personal access token",
+      "Call figma_get_me with no arguments"
+    ],
+    "expect": "Result is a JSON object with id, email and handle fields matching the token owner's Figma account.",
+    "result": "untested",
+    "notes": "needs a real vendor account"
+  },
+  {
+    "id": "TC-FIGMA-002",
+    "ac": "AC2",
+    "type": "auto",
+    "source": "design",
+    "text": "Any tool call without X-Figma-Token returns HTTP 401 with required_headers listing X-Figma-Token.",
+    "tests": ["tests/test_middleware.py::test_missing_header_returns_401"]
+  },
+  {
+    "id": "TC-FIGMA-003",
+    "ac": "AC3",
+    "type": "manual",
+    "source": "design",
+    "text": "figma_get_file on a known file key returns the document node tree; an ids filter scopes the tree to those nodes.",
+    "steps": [
+      "Call figma_get_file with a known file_key and no ids",
+      "Call figma_get_file again with the same file_key and ids set to one node id from the first result"
+    ],
+    "expect": "First call returns a full document tree. Second call returns a tree containing only the requested node id and its subtree.",
+    "result": "untested",
+    "notes": "needs a real vendor account"
+  },
+  {
+    "id": "TC-FIGMA-004",
+    "ac": "AC4",
+    "type": "manual",
+    "source": "design",
+    "text": "figma_get_file_nodes with specific ids returns only those nodes, not the rest of the file.",
+    "steps": [
+      "Call figma_get_file_nodes with file_key and ids set to 2 known node ids"
+    ],
+    "expect": "Result's nodes map has exactly those 2 ids as keys, each with its own subtree.",
+    "result": "untested",
+    "notes": "needs a real vendor account"
+  },
+  {
+    "id": "TC-FIGMA-005",
+    "ac": "AC5",
+    "type": "manual",
+    "source": "design",
+    "text": "figma_get_file_meta returns name/thumbnail_url/last_modified without the node tree.",
+    "steps": [
+      "Call figma_get_file_meta with a known file_key"
+    ],
+    "expect": "Result includes name, thumbnail_url and last_modified; result does not include a document key.",
+    "result": "untested",
+    "notes": "needs a real vendor account"
+  },
+  {
+    "id": "TC-FIGMA-006",
+    "ac": "AC6",
+    "type": "manual",
+    "source": "design",
+    "text": "figma_render_images with format svg returns a non-null image URL per requested node id.",
+    "steps": [
+      "Call figma_render_images with file_key, ids set to 1 known node id, format='svg'"
+    ],
+    "expect": "Result's images map has that node id with a non-null URL.",
+    "result": "untested",
+    "notes": "needs a real vendor account"
+  },
+  {
+    "id": "TC-FIGMA-007",
+    "ac": "AC7",
+    "type": "manual",
+    "source": "design",
+    "text": "figma_list_image_fills on a file with at least one embedded image returns a non-empty images map.",
+    "steps": [
+      "Call figma_list_image_fills with a file_key known to contain an embedded image fill"
+    ],
+    "expect": "Result's images map is non-empty, keyed by image reference with a download URL value.",
+    "result": "untested",
+    "notes": "needs a real vendor account"
+  },
+  {
+    "id": "TC-FIGMA-008",
+    "ac": "AC8",
+    "type": "manual",
+    "source": "design",
+    "text": "figma_list_file_versions returns a versions page plus prev_page/next_page metadata; paging with before/after advances to a different page.",
+    "steps": [
+      "Call figma_list_file_versions with a file_key that has more than one page of version history",
+      "Call figma_list_file_versions again with before (or after) set to the id of a version already seen in the first call"
+    ],
+    "expect": "First call returns a versions list and a non-null next_page. Second call returns a different set of versions than the first.",
+    "result": "untested",
+    "notes": "needs a real vendor account; step wording changed from cursor to before/after in review round 1 -- see docs/tickets/PRD-21325-review.md Fixes, AC8 itself is unaffected"
+  },
+  {
+    "id": "TC-FIGMA-009",
+    "ac": "AC9",
+    "type": "manual",
+    "source": "design",
+    "text": "figma_list_folders(team_id=...) returns that team's top-level folders.",
+    "steps": [
+      "Call figma_list_folders with team_id set to a known team id"
+    ],
+    "expect": "Result's folders list includes the known top-level folders of that team.",
+    "result": "untested",
+    "notes": "needs a real vendor account"
+  },
+  {
+    "id": "TC-FIGMA-010",
+    "ac": "AC9",
+    "type": "manual",
+    "source": "design",
+    "text": "figma_list_folders(folder_id=...) returns that folder's direct subfolders.",
+    "steps": [
+      "Call figma_list_folders with folder_id set to a known folder id that has subfolders"
+    ],
+    "expect": "Result's folders list includes the known subfolders of that folder.",
+    "result": "untested",
+    "notes": "needs a real vendor account"
+  },
+  {
+    "id": "TC-FIGMA-011",
+    "ac": "AC9",
+    "type": "auto",
+    "source": "design",
+    "text": "figma_list_folders called with both team_id and folder_id, or with neither, returns invalid_argument and makes no upstream call.",
+    "tests": ["tests/test_argument_errors.py::test_list_folders_requires_exactly_one_of_team_or_folder"]
+  },
+  {
+    "id": "TC-FIGMA-012",
+    "ac": "AC10",
+    "type": "manual",
+    "source": "design",
+    "text": "figma_list_folder_files(folder_id=...) returns the files directly inside that folder.",
+    "steps": [
+      "Call figma_list_folder_files with folder_id set to a known folder id containing at least one file"
+    ],
+    "expect": "Result's files list includes the known file(s) in that folder.",
+    "result": "untested",
+    "notes": "needs a real vendor account"
+  },
+  {
+    "id": "TC-FIGMA-013",
+    "ac": "AC11",
+    "type": "manual",
+    "source": "design",
+    "text": "figma_list_comments on a file with existing comments returns them with author/message/timestamp.",
+    "steps": [
+      "Call figma_list_comments with a file_key known to have at least one comment"
+    ],
+    "expect": "Result's comments list includes the known comment(s) with author, message and timestamp fields.",
+    "result": "untested",
+    "notes": "needs a real vendor account"
+  },
+  {
+    "id": "TC-FIGMA-014",
+    "ac": "AC12",
+    "type": "manual",
+    "source": "design",
+    "text": "figma_create_comment posts a new top-level comment, and a threaded reply when comment_id is given.",
+    "steps": [
+      "Call figma_create_comment with file_key and a test message, no comment_id",
+      "Call figma_create_comment again with the same file_key, a new message, and comment_id set to the id returned by the first call"
+    ],
+    "expect": "First call returns a new top-level comment object. Second call returns a reply comment linked to the first comment's id.",
+    "result": "untested",
+    "notes": "needs a real vendor account"
+  },
+  {
+    "id": "TC-FIGMA-015",
+    "ac": "AC13",
+    "type": "manual",
+    "source": "design",
+    "text": "figma_delete_comment without confirm:true does not delete the comment.",
+    "steps": [
+      "Create a test comment via figma_create_comment",
+      "Call figma_delete_comment with that comment's id and confirm omitted (or false)",
+      "Call figma_list_comments and check the comment is still present"
+    ],
+    "expect": "figma_delete_comment returns a not-done result; the comment still appears in figma_list_comments afterward.",
+    "result": "untested",
+    "notes": "needs a real vendor account"
+  },
+  {
+    "id": "TC-FIGMA-016",
+    "ac": "AC13",
+    "type": "manual",
+    "source": "design",
+    "text": "figma_delete_comment with confirm:true permanently deletes the comment.",
+    "steps": [
+      "Create a test comment via figma_create_comment",
+      "Call figma_delete_comment with that comment's id and confirm:true",
+      "Call figma_list_comments and check the comment is gone"
+    ],
+    "expect": "figma_delete_comment returns {done:true, deleted_comment_id}; the comment no longer appears in figma_list_comments.",
+    "result": "untested",
+    "notes": "needs a real vendor account"
+  },
+  {
+    "id": "TC-FIGMA-017",
+    "ac": "AC14",
+    "type": "auto",
+    "source": "design",
+    "text": "Status-to-error-code mapping: 400/403/404/429/5xx/network-timeout each map to the documented envelope code and retryable flag, and none raise past run_tool.",
+    "tests": ["tests/test_api_client.py::test_status_to_code_mapping"]
+  },
+  {
+    "id": "TC-FIGMA-018",
+    "ac": "AC14",
+    "type": "manual",
+    "source": "design",
+    "text": "A real call against a deliberately invalid file key returns not_found via the structured error envelope, not an exception.",
+    "steps": [
+      "Call figma_get_file with file_key set to a syntactically valid but non-existent file key"
+    ],
+    "expect": "Tool call returns {\"error\":{\"code\":\"not_found\",...}} as its string result; no exception propagates.",
+    "result": "untested",
+    "notes": "needs a real vendor account"
+  },
+  {
+    "id": "TC-FIGMA-019",
+    "ac": "AC15",
+    "type": "auto",
+    "source": "design",
+    "text": "A mocked oversized figma_list_comments response (>20000 chars serialized) is returned truncated with has_more/truncated fields rather than erroring or silently dropping records.",
+    "tests": ["tests/test_json_capped.py::test_oversized_list_is_truncated_with_has_more"]
+  },
+  {
+    "id": "TC-FIGMA-020",
+    "ac": "AC16",
+    "type": "auto",
+    "source": "design",
+    "text": "repr(FigmaCredentials(...)) and every logged error path redact the raw token value.",
+    "tests": ["tests/test_api_client.py::test_credentials_repr_redacts_token"]
+  },
+  {
+    "id": "TC-FIGMA-021",
+    "ac": "AC17",
+    "type": "auto",
+    "source": "design",
+    "text": "Two concurrent simulated requests carrying different X-Figma-Token values each see only their own credential inside the tool body (contextvars isolation).",
+    "tests": ["tests/test_middleware.py::test_concurrent_requests_do_not_leak_credentials"]
+  }
+]
