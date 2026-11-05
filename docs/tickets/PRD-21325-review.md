@@ -1,5 +1,7 @@
 # PRD-21325 · Code review
 
+Status: frozen @ f4cb1c8
+
 ## Round 1 · 2026-11-05 · reviewed dev/PRD-21325 @ 8bde321 (base main @ 0f469f4)
 
 Verdict: changes requested
@@ -40,3 +42,38 @@ Fixed at `dev/PRD-21325 @ 7033577` (on top of the reviewed `8bde321`). Only the 
 - Chinese-text grep (`grep -rnP '[\x{4e00}-\x{9fff}]' --exclude-dir=.git --exclude-dir=.venv .`): no output.
 - README "MSPbots Connector" section vs `reference/readme-connector-section.md`: still byte-identical (not touched by this round's edits, which are in the separate "Tools" section below it).
 - `gitleaks`: not installed in this sandbox, same as round 1; not run (environment gap, not a round-1 regression).
+
+## Round 2 · 2026-11-05 · reviewed dev/PRD-21325 @ f4cb1c8 (base main @ 0f469f4)
+
+Verdict: approved
+
+### Scope
+
+Diff `8bde321..f4cb1c8` (the round-1 reviewed commit to the current tip): 7 files — `README.md`, `docs/tickets/PRD-21325-review.md` (round 1 doc, not reviewed as code), `docs/tickets/PRD-21325.ac.json`, `src/figma_mcp/server.py`, `src/figma_mcp/tools/_common.py`, `src/figma_mcp/tools/versions.py`, `tests/test_api_client.py`.
+
+### Round 1 must-fix — verified fixed
+
+Finding 1 (`cursor_page` sending an undocumented `cursor` query param to `GET /v1/files/{file_key}/versions`): fixed correctly.
+
+- Independently re-verified the upstream contract from a third source beyond the two the dev leg cited: fetched `figma/rest-api-spec`'s `openapi/openapi.yaml` directly (not just the rendered docs page, which this round's `WebFetch` found renders the parameter table as empty text — a tool/rendering gap, not evidence either way) and read the `GET /v1/files/{file_key}/versions` operation definition verbatim: it declares exactly `page_size`, `before`, `after` as query parameters and no `cursor`. This matches the round-1 finding and the fix.
+- `src/figma_mcp/tools/_common.py`: `cursor_page()` (hardcoded `cursor=` query key) replaced by `paged_get()`, which forwards only the params the caller passes. The removed `Cursor` type and the old `cursor=` injection are gone; `grep -rniw cursor src/ tests/` shows no remaining functional reference (only doc comments and one unrelated mock URL string in `tests/test_json_capped.py`).
+- `src/figma_mcp/tools/versions.py`: `figma_list_file_versions(file_key, before, after)` forwards both as independent, optional params — matches the spec's `before`/`after` semantics (mutually usable, not required).
+- `tests/test_api_client.py::test_list_file_versions_pages_with_before_after`: asserts `before` and `after` are each sent as their own query param and that the other is absent on each call — a stronger assertion than round 1's single-param test (round 1's only checked `before`; this version separately exercises `after` too).
+- Re-ran the full gate at `f4cb1c8` myself (not just trusted the dev leg's report): `uv sync && uv run pytest` → **96 passed, 0 failed**, same count as both the original and round-1-fix runs. Started the server locally (`uv run python -m figma_mcp`) and confirmed live: `GET /health` → 200; `POST /mcp initialize` with no `X-Figma-Token` → 401 `Missing header(s): X-Figma-Token`; with a placeholder token, `tools/list`'s `figma_list_file_versions` entry shows `before`/`after` (both optional strings) in `inputSchema` and no `cursor` field.
+- README "MSPbots Connector" section: still byte-identical to `reference/readme-connector-section.md` (this round's edits are confined to the separate "Tools" table below it, consistent with the diff). Chinese-text grep: clean.
+
+### Test case change (`docs/tickets/PRD-21325.ac.json`, TC-FIGMA-008)
+
+Procedure wording changed from "cursor set to ... next_page" to "before (or after) set to the id of a version already seen". Confirmed non-expanding: AC8 itself ("returns the version history as a page of versions plus opaque `prev_page`/`next_page` cursors") names no request-side parameter, so the acceptance criterion is unaffected — only the human-executed steps changed to match the corrected API contract. `result`/`notes` still correctly read `untested` / "needs a real vendor account"; this was not newly claimed as passing.
+
+### Finding 2 (round 1 suggestion) — left open, as expected
+
+`PageSize`/`DEFAULT_PAGE_SIZE`/`MAX_PAGE_SIZE` dead code was explicitly left untouched this round ("per scope discipline" in the dev leg's own conclusion) — correct, it was filed as a non-blocking suggestion, not a must-fix.
+
+### New findings this round
+
+None. No new must-fix or suggestion surfaced in the round-2 diff.
+
+### Not re-litigated this round
+
+Everything outside the round-1-to-round-2 diff (credential handling, error envelope, retry/backoff, Dockerfile, SOP checklist, the two Open Questions) was already reviewed clean in round 1 and is untouched by this diff.
