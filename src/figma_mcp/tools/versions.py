@@ -13,19 +13,29 @@
 # limitations under the License.
 """File version history."""
 
+from typing import Annotated
+
 from mcp.server.fastmcp import FastMCP
+from pydantic import Field
 
 from ..api_client import FigmaClient
 from ..config import API_BASE
-from ._common import READ_ONLY, ClientFactory, Cursor, FileKey, cursor_page, run_tool
+from ._common import READ_ONLY, ClientFactory, FileKey, paged_get, run_tool
+
+# Figma's documented query parameters for GET /v1/files/:key/versions are page_size, before and
+# after (all version ids) -- there is no "cursor" parameter on this endpoint (PRD-21325 review
+# round 1, verified against https://developers.figma.com/docs/rest-api/version-history-endpoints/
+# and the figma/rest-api-spec OpenAPI source). before/after are exclusive: pass the id of a version
+# already seen (e.g. the oldest one in the current page) to fetch the versions right before/after it.
+VersionId = Annotated[str | None, Field(description="A version id from an already-seen page, to fetch the versions right before/after it.")]
 
 
 def register(mcp: FastMCP, client_factory: ClientFactory) -> None:
     @mcp.tool(annotations=READ_ONLY)
-    async def figma_list_file_versions(file_key: FileKey, cursor: Cursor = None) -> str:
-        """List a file's version history; pass the previous call's next_page as cursor to page on."""
+    async def figma_list_file_versions(file_key: FileKey, before: VersionId = None, after: VersionId = None) -> str:
+        """List a file's version history; pass a seen version id as before/after to page on."""
 
         async def action(client: FigmaClient) -> dict:
-            return await cursor_page(client, API_BASE, f"files/{file_key}/versions", "versions", {}, cursor)
+            return await paged_get(client, API_BASE, f"files/{file_key}/versions", "versions", {"before": before, "after": after})
 
         return await run_tool("figma_list_file_versions", client_factory, action)

@@ -115,12 +115,13 @@ is never double-posted or double-deleted.
 | Identity | `figma_get_me` |
 | Files | `figma_get_file` (**file_key**, ids, depth, geometry), `figma_get_file_nodes` (**file_key**, **ids**), `figma_get_file_meta` (**file_key**) |
 | Images | `figma_render_images` (**file_key**, **ids**, format, scale), `figma_list_image_fills` (**file_key**) |
-| Versions | `figma_list_file_versions` (**file_key**, cursor) |
+| Versions | `figma_list_file_versions` (**file_key**, before, after) |
 | Folders | `figma_list_folders` (team_id or folder_id, exactly one), `figma_list_folder_files` (**folder_id**) |
 | Comments | `figma_list_comments` (**file_key**); **write**: `figma_create_comment` (**file_key**, **message**, comment_id, client_meta); **confirm**: `figma_delete_comment` (**file_key**, **comment_id**) |
 
-`figma_list_file_versions` pages with Figma's own opaque cursor: pass the previous call's
-`next_page` back in as `cursor` to continue; `figma_list_folders`/`figma_list_folder_files`/
+`figma_list_file_versions` pages with Figma's own `before`/`after` version-id parameters: pass the
+id of an already-seen version to fetch the versions right before/after it (Figma does not document
+a generic "cursor" parameter for this endpoint); `figma_list_folders`/`figma_list_folder_files`/
 `figma_list_comments`/`figma_list_image_fills` are not paginated upstream, but every tool still
 caps its serialized result at 20000 characters and reports `has_more`/`truncated` when a result
 had to be cut.

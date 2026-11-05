@@ -92,14 +92,14 @@
     "ac": "AC8",
     "type": "manual",
     "source": "design",
-    "text": "figma_list_file_versions returns a versions page plus prev_page/next_page cursors; paging with the cursor advances to the next page.",
+    "text": "figma_list_file_versions returns a versions page plus prev_page/next_page metadata; paging with before/after advances to a different page.",
     "steps": [
       "Call figma_list_file_versions with a file_key that has more than one page of version history",
-      "Call figma_list_file_versions again with cursor set to the first call's next_page value"
+      "Call figma_list_file_versions again with before (or after) set to the id of a version already seen in the first call"
     ],
     "expect": "First call returns a versions list and a non-null next_page. Second call returns a different set of versions than the first.",
     "result": "untested",
-    "notes": "needs a real vendor account"
+    "notes": "needs a real vendor account; step wording changed from cursor to before/after in review round 1 -- see docs/tickets/PRD-21325-review.md Fixes, AC8 itself is unaffected"
   },
   {
     "id": "TC-FIGMA-009",

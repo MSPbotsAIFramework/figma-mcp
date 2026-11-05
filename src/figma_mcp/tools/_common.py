@@ -44,7 +44,6 @@ TeamId = Annotated[str | None, Field(description="Figma team id.", min_length=1)
 FolderId = Annotated[str | None, Field(description="Figma folder id.", min_length=1)]
 ImageFormat = Annotated[str | None, Field(description="Image format (default png).", pattern="^(png|jpg|svg|pdf)$")]
 ImageScale = Annotated[float | None, Field(description="Export scale, 1-4 (default 1).", ge=1, le=4)]
-Cursor = Annotated[str | None, Field(description="Opaque cursor from a previous call's next_page, to continue paging.")]
 PageSize = Annotated[int | None, Field(description=f"Records per page (default {DEFAULT_PAGE_SIZE}, max {MAX_PAGE_SIZE}).", ge=1, le=MAX_PAGE_SIZE)]
 Confirm = Annotated[bool | None, Field(description="Must be true, set only after the user approved this exact deletion.")]
 
@@ -53,13 +52,16 @@ def compact(values: dict[str, Any]) -> dict[str, Any]:
     return {k: v for k, v in values.items() if v is not None}
 
 
-async def cursor_page(client: FigmaClient, base_url: str, path: str, key: str, params: dict[str, Any], cursor: str | None) -> dict:
-    """GET a cursor-paginated Figma endpoint and pass its own prev_page/next_page tokens through.
+async def paged_get(client: FigmaClient, base_url: str, path: str, key: str, params: dict[str, Any]) -> dict:
+    """GET a Figma list endpoint and pass its own prev_page/next_page pagination fields through.
 
-    Figma's own cursors are opaque (not guaranteed to be offsets), so they are forwarded as-is
-    instead of being translated into an offset model.
+    ``params`` are forwarded exactly as the caller built them: different Figma endpoints page with
+    different, endpoint-specific query parameters (e.g. file versions page via ``before``/``after``
+    version ids, PRD-21325 review round 1 -- there is no shared opaque "cursor" parameter across
+    endpoints, so this helper does not invent one). prev_page/next_page are returned as-is for the
+    caller to inspect; they are informational, not a request parameter this helper understands.
     """
-    payload = await client.get(base_url, path, compact(params) | {"cursor": cursor})
+    payload = await client.get(base_url, path, compact(params))
     items = payload.get(key, []) if isinstance(payload, dict) else []
     pagination = payload.get("pagination", {}) if isinstance(payload, dict) else {}
     return compact(

@@ -195,20 +195,30 @@ async def test_list_folder_files(monkeypatch):
     assert result["files"] == [{"key": "k1"}]
 
 
-async def test_list_file_versions_pages_with_cursor(monkeypatch):
+async def test_list_file_versions_pages_with_before_after(monkeypatch):
+    # PRD-21325 review round 1: Figma documents before/after/page_size for this endpoint, not a
+    # "cursor" parameter (https://developers.figma.com/docs/rest-api/version-history-endpoints/,
+    # figma/rest-api-spec OpenAPI source) -- an unrecognized cursor=... would be silently ignored.
     rec = Recorder(
         {
             "files/key1/versions": {
                 "versions": [{"id": "v1"}],
-                "pagination": {"prev_page": None, "next_page": "https://api.figma.com/v1/files/key1/versions?cursor=abc"},
+                "pagination": {"prev_page": None, "next_page": "https://api.figma.com/v1/files/key1/versions?before=v1"},
             }
         }
     )
     result = await _call(monkeypatch, rec, "figma_list_file_versions", {"file_key": "key1"})
     assert result["versions"] == [{"id": "v1"}]
-    assert result["next_page"].endswith("cursor=abc")
-    assert "cursor" not in rec.requests[0].url.params  # first call: no cursor sent yet
+    assert result["next_page"].endswith("before=v1")
+    assert "before" not in rec.requests[0].url.params  # first call: no paging id sent yet
+    assert "after" not in rec.requests[0].url.params
 
     rec2 = Recorder({"files/key1/versions": {"versions": [{"id": "v2"}], "pagination": {}}})
-    await _call(monkeypatch, rec2, "figma_list_file_versions", {"file_key": "key1", "cursor": result["next_page"]})
-    assert rec2.requests[0].url.params["cursor"] == result["next_page"]
+    await _call(monkeypatch, rec2, "figma_list_file_versions", {"file_key": "key1", "before": "v1"})
+    assert rec2.requests[0].url.params["before"] == "v1"
+    assert "after" not in rec2.requests[0].url.params
+
+    rec3 = Recorder({"files/key1/versions": {"versions": [{"id": "v0"}], "pagination": {}}})
+    await _call(monkeypatch, rec3, "figma_list_file_versions", {"file_key": "key1", "after": "v1"})
+    assert rec3.requests[0].url.params["after"] == "v1"
+    assert "before" not in rec3.requests[0].url.params
